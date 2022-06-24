@@ -1,9 +1,12 @@
+import traceback
+
 from colorama import Fore
 # pip install PySocks, чтобы скачать socks
 import socks
 import time
 import random
 import asyncio
+from telethon.tl.types import Message, PeerUser
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetHistoryRequest
 
@@ -85,8 +88,11 @@ class API:
                 await self.client.sign_in(self.phone, code)
                 self.logged = True
                 print(Fore.WHITE + f'API по номеру {self.phone}. Логин пройден, нужен запрос группы')
+                return 1
             except:
+                traceback.format_exc()
                 print(Fore.RED + f'API по номеру {self.phone}. Подключение не удалось, нужен повторный запрос')
+                return 0
         else:
             print(Fore.WHITE + f'API по номеру {self.phone}. Логин уже пройден, код не нужен')
 
