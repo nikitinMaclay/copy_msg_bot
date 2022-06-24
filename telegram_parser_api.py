@@ -85,8 +85,10 @@ class API:
                 await self.client.sign_in(self.phone, code)
                 self.logged = True
                 print(Fore.WHITE + f'API по номеру {self.phone}. Логин пройден, нужен запрос группы')
+                return 1
             except:
                 print(Fore.RED + f'API по номеру {self.phone}. Подключение не удалось, нужен повторный запрос')
+                return 0
         else:
             print(Fore.WHITE + f'API по номеру {self.phone}. Логин уже пройден, код не нужен')
 
