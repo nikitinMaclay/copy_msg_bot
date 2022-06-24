@@ -48,7 +48,7 @@ def timeout(mn: int, mx: int):
 # Текст Белый - всё идет правильно
 # Текст Зеленый - успешное поделючение
 class API:
-    def __init__(self, api_id: int = None, api_hash: str = None, phone: str = None):
+    def __init__(self, api_id: int = 0, api_hash: str = '', phone: str = ''):
         global proxy_base
         self.phone = phone
         self.api_id = api_id
