@@ -67,9 +67,11 @@ class API:
             print(Fore.WHITE + f'API по номеру {self.phone}. Нужно подтверждение кода - sign_in(code)')
             await self.client.send_code_request(self.phone)
             print(Fore.WHITE + f'API по номеру {self.phone}. Код отправлен')
+            return 1
         else:
             self.logged = True
             print(Fore.WHITE + f'API по номеру {self.phone}. Логин уже пройден, код не нужен')
+            return 0
 
     # Повторная отправка кода, в случае ошибки. Лучше вызывай по колбэку
     async def code_again(self):
@@ -121,10 +123,11 @@ class API:
                 hash=0))
             messages = history.messages
             for message in messages:
+                message.to_dict()
                 if message.reply_to is None:
-                    if '?' in message.text:
+                    if '?' in message.message:
                         if message.sender_id not in data and str(message.sender_id) not in iter_user_id:
-                            iter_user_id.append(str(message.sender_id))
+                            iter_user_id.append(str(message.sender_id) + "\n")
                             res.append(message)
                             # этот принт сообщения можешь убрать, если
                             print(message)
@@ -139,8 +142,7 @@ class API:
 # Если будут проблемы пиши, звони
 # Я сидел до четырех, поэтому надеюсь, что всё будет работать хорошо
 
-
-api = API(15187043, 'f882c210378bfcdf6b17fa3f8ce13433', '+77772566585')
-await api.get_chat('code')
-await api.parse()
-
+#
+# api = API(15187043, 'f882c210378bfcdf6b17fa3f8ce13433', '+77772566585')
+# await api.get_chat('code')
+# await api.parse()
