@@ -79,7 +79,7 @@ class API:
     # После создания класса, в телегу на номер придут код, его передавай в переменную code
     # и вызови эту функцию, когда чел зарегается в боте
     async def login(self, code):
-        if not self.client.is_user_authorized():
+        if not self.logged:
             try:
                 await self.client.sign_in(self.phone, code)
                 self.logged = True
