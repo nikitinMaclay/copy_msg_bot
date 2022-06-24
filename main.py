@@ -18,6 +18,7 @@ moderator_access = {
 }
 
 moderator_api = None
+last_message = None
 
 
 @dp.message_handler(commands=['start'])
@@ -31,6 +32,8 @@ async def reg(message: types.Message):
 
 @dp.message_handler(content_types=["text"])
 async def receive_message(message: types.Message):
+    global last_message
+    last_message = message
     msg_for_handling = message["text"]
     if not moderator_access["api_id"]:
         if msg_for_handling.isdigit():
@@ -76,9 +79,11 @@ async def login(query: CallbackQuery):
 
 @dp.callback_query_handler(text="continue_id")
 async def login(query: CallbackQuery):
+    global last_message
     await bot.delete_message(chat_id=query.from_user.id,
                              message_id=query.message.message_id)
     await bot.send_message(query.from_user.id, "Введите api_hash")
+    moderator_access["api_id"] = int(last_message['text'])
 
 
 @dp.callback_query_handler(text="continue_hash")
