@@ -52,19 +52,25 @@ class API:
     def __init__(self, api_id: int, api_hash: str, phone: str):
         global proxy_base
         self.phone = phone
+        self.api_id = api_id
+        self.api_hash = api_hash
         self.logged = False
-        proxy = (socks.SOCKS5, *random.choice(proxy_base).split(':'))
-        self.client = TelegramClient(phone, api_id, api_hash, proxy=proxy)
-        self.client.connect()
+        self.target_group = None
+        self.client = None
+        self.proxy = (socks.SOCKS5, *random.choice(proxy_base).split(':'))
+
+    async def start(self):
+        self.client = TelegramClient(self.phone, self.api_id, self.api_hash, proxy=self.proxy)
+        await self.client.connect()
         print(Fore.WHITE + f'API по номеру {self.phone}. Подключен')
-        if not self.client.is_user_authorized():
+        self.logged = await self.client.is_user_authorized()
+        if not self.logged:
             print(Fore.WHITE + f'API по номеру {self.phone}. Нужно подтверждение кода - sign_in(code)')
-            self.client.send_code_request(phone)
+            await self.client.send_code_request(self.phone)
             print(Fore.WHITE + f'API по номеру {self.phone}. Код отправлен')
         else:
             self.logged = True
             print(Fore.WHITE + f'API по номеру {self.phone}. Логин уже пройден, код не нужен')
-        self.target_group = None
 
     # Повторная отправка кода, в случае ошибки. Лучше вызывай по колбэку
     async def code_again(self):
