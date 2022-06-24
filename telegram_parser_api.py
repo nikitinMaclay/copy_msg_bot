@@ -114,7 +114,8 @@ class API:
                 data = f.readlines()
             for k in range(len(data)):
                 data[k] = int(data[k].replace('\n', ''))
-            for message in self.client.iter_messages(self.target_group, limit=limit):
+            messages = await self.client.iter_messages(self.target_group, limit=limit)
+            for message in messages:
                 timeout(sec_min, sec_max)
                 if message.reply_to is None:
                     if '?' in message.text:
