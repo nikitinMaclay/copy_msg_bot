@@ -62,3 +62,12 @@ markup_continue_after_group_reload = InlineKeyboardMarkup(row_width=1)
 buttons_continue_after_group_reload = [InlineKeyboardButton(text="Отправить снова", callback_data='continue_group')]
 
 markup_continue_after_group_reload.add(*buttons_continue_after_group_reload)
+
+
+markup_accept_message = InlineKeyboardMarkup(row_width=2)
+buttons_accept_message = [
+    InlineKeyboardButton(text="Принять", callback_data='accept_message'),
+    InlineKeyboardButton(text="Отклонить", callback_data='decline_message')
+]
+
+markup_accept_message.add(*buttons_accept_message)

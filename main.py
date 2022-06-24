@@ -1,5 +1,6 @@
 import time
-
+import traceback
+from colorama import Fore
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
@@ -8,7 +9,7 @@ from aiogram.types.callback_query import CallbackQuery
 from mark_ups import menu_markup_for_reg, markup_continue_after_id, markup_continue_after_hash, markup_receive_code,\
     markup_continue_after_id_reload, markup_continue_after_hash_reload, markup_continue_after_phone, \
     markup_continue_after_phone_reload, markup_receive_code_reload, markup_continue_after_group, \
-    markup_continue_after_group_reload
+    markup_continue_after_group_reload, markup_accept_message
 from telegram_parser_api import API
 
 
@@ -25,6 +26,10 @@ moderator_access = {
 
 moderator_api = None
 last_message = ""
+moderator_id = 0
+all_messages_base = {
+    0: types.Message
+}
 
 
 @dp.message_handler(commands=['start'])
@@ -103,7 +108,7 @@ async def login(query: CallbackQuery):
 
 @dp.callback_query_handler(text="receive_code")
 async def login(query: CallbackQuery):
-    global last_message, moderator_api
+    global last_message, moderator_api, moderator_id
     if last_message["text"].isdigit() and len(last_message["text"]) == 5:
         moderator_access["code"] = last_message["text"]
         await bot.send_message(query.from_user.id, "Код подтверждения принят!")
@@ -111,6 +116,7 @@ async def login(query: CallbackQuery):
         if login_res:
             await bot.send_message(query.from_user.id, "Авторизация успешна! Введите ссылку на группу",
                                    reply_markup=markup_continue_after_group)
+            moderator_id = query.from_user.id
         else:
             await bot.send_message(query.from_user.id, "Не тот код!\nВведите"
                                                        " код подтверждения повторно",
@@ -144,6 +150,42 @@ async def login(query: CallbackQuery):
                                reply_markup=markup_continue_after_group_reload)
     await bot.delete_message(chat_id=query.from_user.id,
                              message_id=query.message.message_id)
+
+
+@dp.callback_query_handler(text="accept_message")
+async def accept(query: CallbackQuery):
+    global moderator_api
+    # Жесть, я решение забыл. Я сидел уже придумал и просто забыл. Завтра вспомню наверное
+    await bot.edit_message_reply_markup(chat_id=query.from_user.id,
+                                        message_id=query.message.message_id,
+                                        reply_markup=None)
+
+
+@dp.callback_query_handler(text="decline_message")
+async def decline(query: CallbackQuery):
+    global last_message, moderator_api
+    await bot.delete_message(chat_id=query.from_user.id,
+                             message_id=query.message.message_id)
+
+
+async def main_sender(moder_id, timer=120):
+    global moderator_api
+    while True:
+        try:
+            result = await moderator_api.parse()
+            time.sleep(10)
+            for msg in result:
+                all_messages_base[msg.from_id.user_id] = msg
+                res_msg = f"Сообщение:\n" \
+                          f"{msg.message}"
+                # Берем id этого сообщения и засовываем как ключ в all_msgs_base или user_id, мозг не работает уже
+                await bot.send_message(moder_id, res_msg, reply_markup=markup_accept_message)
+                time.sleep(10)
+
+            time.sleep(timer + 60)
+        except:
+            traceback.format_exc()
+            print(Fore.RED + f'API модера {moder_id}. Бот упал во время работы')
 
 if __name__ == "__main__":
     executor.start_polling(dp)
