@@ -5,8 +5,7 @@ import time
 import random
 import asyncio
 from telethon.sync import TelegramClient
-from telethon.tl.functions.messages import GetDialogsRequest
-from telethon.tl.types import InputPeerEmpty
+from telethon.tl.functions.messages import GetHistoryRequest
 
 
 # Создай глобальную переменную
@@ -107,16 +106,21 @@ class API:
     # .........................................................................................................
     # Возвращает тебе список сообщений type.Message, уже фильтрованных, тебе их нужно отправлять модеру
     async def parse(self, limit=5, sec_min=10, sec_max=20):
-        if not self.logged:
+        if self.logged:
             res = []
             iter_user_id = []
             with open('user_ids.txt', mode='r') as f:
                 data = f.readlines()
             for k in range(len(data)):
                 data[k] = int(data[k].replace('\n', ''))
-            messages = await self.client.iter_messages(self.target_group, limit=limit)
+            history = await self.client(GetHistoryRequest(
+                peer=self.target_group,
+                offset_id=0,
+                offset_date=None, add_offset=0,
+                limit=limit, max_id=0, min_id=0,
+                hash=0))
+            messages = history.messages
             for message in messages:
-                timeout(sec_min, sec_max)
                 if message.reply_to is None:
                     if '?' in message.text:
                         if message.sender_id not in data and str(message.sender_id) not in iter_user_id:
