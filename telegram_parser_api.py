@@ -3,6 +3,7 @@ from colorama import Fore
 import socks
 import time
 import random
+import asyncio
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetDialogsRequest
 from telethon.tl.types import InputPeerEmpty
@@ -51,6 +52,7 @@ class API:
     def __init__(self, api_id: int, api_hash: str, phone: str):
         global proxy_base
         self.phone = phone
+        self.logged = False
         proxy = (socks.SOCKS5, *random.choice(proxy_base).split(':'))
         self.client = TelegramClient(phone, api_id, api_hash, proxy=proxy)
         self.client.connect()
@@ -59,41 +61,37 @@ class API:
             print(Fore.WHITE + f'API по номеру {self.phone}. Нужно подтверждение кода - sign_in(code)')
             self.client.send_code_request(phone)
             print(Fore.WHITE + f'API по номеру {self.phone}. Код отправлен')
+        else:
+            self.logged = True
+            print(Fore.WHITE + f'API по номеру {self.phone}. Логин уже пройден, код не нужен')
         self.target_group = None
 
     # Повторная отправка кода, в случае ошибки. Лучше вызывай по колбэку
-    def code_again(self):
-        self.client.send_code_request(self.phone)
+    async def code_again(self):
+        await self.client.send_code_request(self.phone)
 
     # После создания класса, в телегу на номер придут код, его передавай в переменную code
     # и вызови эту функцию, когда чел зарегается в боте
-    def sign_in(self, code):
-        try:
-            self.client.sign_in(self.phone, code)
-            print(Fore.WHITE + f'API по номеру {self.phone}. Логин пройден, нужен запрос группы')
-        except:
-            print(Fore.RED + f'API по номеру {self.phone}. Подключение не удалось, нужен повторный запрос')
+    async def login(self, code):
+        if not self.client.is_user_authorized():
+            try:
+                await self.client.sign_in(self.phone, code)
+                self.logged = True
+                print(Fore.WHITE + f'API по номеру {self.phone}. Логин пройден, нужен запрос группы')
+            except:
+                print(Fore.RED + f'API по номеру {self.phone}. Подключение не удалось, нужен повторный запрос')
+        else:
+            print(Fore.WHITE + f'API по номеру {self.phone}. Логин уже пройден, код не нужен')
 
     # Попроси имя чата, и передай его в group_name, вызови после успешного логина
-    def get_chat(self, group_name: str):
-        chats = []
-        result = self.client(GetDialogsRequest(
-            offset_date=None,
-            offset_id=0,
-            offset_peer=InputPeerEmpty(),
-            limit=50,
-            hash=0
-        ))
-        chats.extend(result.chats)
-        for chat in chats:
-            if chat.title == group_name:
-                self.target_group = chat
-        if self.target_group is None:
-            # Если выскочило, то попроси еще раз ввсети имя группы и пересоздай API() для этого модера
-            # и запроси имя группы повторно, всё остальное оставь прежним
-            raise GroupIsNotFound
-        else:
-            print(Fore.GREEN + f'API по номеру {self.phone} готов к работе')
+    async def get_chat(self, url: str):
+        try:
+            self.target_group = await self.client.get_entity(url)
+            print(Fore.GREEN + f'API по номеру {self.phone}. Чат найден, API готов к работе')
+            return 1
+        except:
+            print(Fore.RED + f'API по номеру {self.phone}. Чат не найден.')
+            return 0
 
     # Это уже сам парсинг группы:
     # limit - количество последних сообщений, которые читаются
@@ -102,14 +100,14 @@ class API:
     # sec_min/sec_max - время ожидания между чтением сообщения (минимальное и максимальное значение в секундах)
     # .........................................................................................................
     # Возвращает тебе список сообщений type.Message, уже фильтрованных, тебе их нужно отправлять модеру
-    def parse(self, limit=5, sec_min=10, sec_max=20):
-        res = []
-        iter_user_id = []
-        with open('user_ids.txt', mode='r') as f:
-            data = f.readlines()
-        for k in range(len(data)):
-            data[k] = int(data[k].replace('\n', ''))
-        with open('user_ids.txt', mode='a') as f:
+    async def parse(self, limit=5, sec_min=10, sec_max=20):
+        if not self.logged:
+            res = []
+            iter_user_id = []
+            with open('user_ids.txt', mode='r') as f:
+                data = f.readlines()
+            for k in range(len(data)):
+                data[k] = int(data[k].replace('\n', ''))
             for message in self.client.iter_messages(self.target_group, limit=limit):
                 timeout(sec_min, sec_max)
                 if message.reply_to is None:
@@ -119,9 +117,19 @@ class API:
                             res.append(message)
                             # этот принт сообщения можешь убрать, если
                             print(message)
-            f.writelines(iter_user_id)
-        res.reverse()
-        return res
+            with open('user_ids.txt', mode='a') as f:
+                f.writelines(iter_user_id)
+            res.reverse()
+            return res
+        else:
+            print(Fore.RED + f'API по номеру {self.phone}. Логин не пройден. Невозможно запустить парсинг')
+            return None
 
 # Если будут проблемы пиши, звони
 # Я сидел до четырех, поэтому надеюсь, что всё будет работать хорошо
+
+
+api = API(15187043, 'f882c210378bfcdf6b17fa3f8ce13433', '+77772566585')
+await api.get_chat('code')
+await api.parse()
+
