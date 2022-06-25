@@ -134,15 +134,17 @@ class API:
             messages = history.messages
             for message in messages:
                 message.to_dict()
-                if message.reply_to is None:
-                    if '?' in message.message:
-                        if message.sender_id not in data and str(message.sender_id) not in iter_user_id:
-                            iter_user_id.append(str(message.sender_id) + "\n")
-                            res.append(message)
-                            # этот принт сообщения можешь убрать, если
-                            print(message)
-            with open('user_ids.txt', mode='a') as f:
-                f.writelines(iter_user_id)
+                if message.message is not None:
+                    if message.reply_to is None:
+                        if '?' in message.message:
+                            if message.sender_id not in data and (str(message.sender_id) + "\n") not in iter_user_id:
+                                iter_user_id.append(str(message.sender_id) + "\n")
+                                res.append(message)
+                                # этот принт сообщения можешь убрать, если
+                                print(message)
+            if iter_user_id:
+                with open('user_ids.txt', mode='a') as f:
+                    f.writelines(iter_user_id)
             res.reverse()
             return res
         else:

@@ -36,6 +36,13 @@ all_messages_base = {
 }
 
 
+@dp.message_handler(commands=['add_group'])
+async def reg(message: types.Message):
+    print(message)
+    message_for_reg = "Введите ссылку на группу"
+    await bot.send_message(message.from_user.id, f"{message_for_reg}", reply_markup=markup_continue_after_group)
+
+
 @dp.message_handler(commands=['start'])
 async def reg(message: types.Message):
     print(message)
@@ -152,6 +159,8 @@ async def login(query: CallbackQuery):
         await bot.send_message(query.from_user.id, "Ссылка принята!")
         if get_chat_res:
             await bot.send_message(query.from_user.id, "Бот начал работу!")
+            await bot.send_message(query.from_user.id, "Чтобы отправить больше ссылок на группы, "
+                                                       "вызовите команду /add_group")
             await main_sender(query.from_user.id)
         else:
             await bot.send_message(query.from_user.id, "Чат не найден. Проверьте, что вы находитесь в этой группе!\n"
@@ -190,21 +199,24 @@ async def decline(query: CallbackQuery):
                              message_id=query.message.message_id)
 
 
-async def main_sender(moder_id, timer=60):
+async def main_sender(moder_id, timer=25):
     global moderator_api
     while True:
+        overall_time = 0
         try:
-            result = await moderator_api.parse(limit=10)
-            time.sleep(5)
-            for msg in result:
-                res_msg = f"Сообщение:\n" \
-                          f"{msg.message}"
-                # Берем id этого сообщения и засовываем как ключ в all_msgs_base или user_id, мозг не работает уже
-                my_message = await bot.send_message(moder_id, res_msg, reply_markup=markup_accept_message)
-                all_messages_base[my_message.message_id] = msg
-                await asyncio.sleep(1)
-            await asyncio.sleep(timer)
-
+            for chat in moderator_api.target_group:
+                result = await moderator_api.parse(chat, limit=15)
+                await asyncio.sleep(5)
+                for msg in result:
+                    res_msg = f"Сообщение:\n" \
+                              f"{msg.message}"
+                    my_message = await bot.send_message(moder_id, res_msg, reply_markup=markup_accept_message)
+                    all_messages_base[my_message.message_id] = msg
+                    await asyncio.sleep(1)
+                overall_time += timer
+                print(overall_time)
+                await asyncio.sleep(timer)
+            await asyncio.sleep(60)
         except:
             print(traceback.format_exc())
             print(Fore.RED + f'API модера {moder_id}. Бот упал во время работы')
