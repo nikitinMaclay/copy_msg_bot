@@ -116,35 +116,33 @@ class API:
     # sec_min/sec_max - время ожидания между чтением сообщения (минимальное и максимальное значение в секундах)
     # .........................................................................................................
     # Возвращает тебе список сообщений type.Message, уже фильтрованных, тебе их нужно отправлять модеру
-    async def parse(self, limit=5, sec_min=10, sec_max=20):
+    async def parse(self, chat, limit=5):
         if self.logged:
             res = []
-            for chat in self.target_group:
-                iter_user_id = []
-                with open('user_ids.txt', mode='r') as f:
-                    data = f.readlines()
-                if data:
-                    for k in range(len(data)):
-                        data[k] = int(data[k].replace('\n', ''))
-                history = await self.client(GetHistoryRequest(
-                    peer=chat,
-                    offset_id=0,
-                    offset_date=None, add_offset=0,
-                    limit=limit, max_id=0, min_id=0,
-                    hash=0))
-                messages = history.messages
-                for message in messages:
-                    message.to_dict()
-                    if message.reply_to is None:
-                        if '?' in message.message:
-                            if message.sender_id not in data and str(message.sender_id) not in iter_user_id:
-                                iter_user_id.append(str(message.sender_id) + "\n")
-                                res.append(message)
-                                # этот принт сообщения можешь убрать, если
-                                print(message)
-                with open('user_ids.txt', mode='a') as f:
-                    f.writelines(iter_user_id)
-                await asyncio.sleep(timeout(sec_min, sec_max))
+            iter_user_id = []
+            with open('user_ids.txt', mode='r') as f:
+                data = f.readlines()
+            if data:
+                for k in range(len(data)):
+                    data[k] = int(data[k].replace('\n', ''))
+            history = await self.client(GetHistoryRequest(
+                peer=chat,
+                offset_id=0,
+                offset_date=None, add_offset=0,
+                limit=limit, max_id=0, min_id=0,
+                hash=0))
+            messages = history.messages
+            for message in messages:
+                message.to_dict()
+                if message.reply_to is None:
+                    if '?' in message.message:
+                        if message.sender_id not in data and str(message.sender_id) not in iter_user_id:
+                            iter_user_id.append(str(message.sender_id) + "\n")
+                            res.append(message)
+                            # этот принт сообщения можешь убрать, если
+                            print(message)
+            with open('user_ids.txt', mode='a') as f:
+                f.writelines(iter_user_id)
             res.reverse()
             return res
         else:
