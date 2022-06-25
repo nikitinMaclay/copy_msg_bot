@@ -119,8 +119,9 @@ class API:
             iter_user_id = []
             with open('user_ids.txt', mode='r') as f:
                 data = f.readlines()
-            for k in range(len(data)):
-                data[k] = int(data[k].replace('\n', ''))
+            if data:
+                for k in range(len(data)):
+                    data[k] = int(data[k].replace('\n', ''))
             history = await self.client(GetHistoryRequest(
                 peer=self.target_group,
                 offset_id=0,

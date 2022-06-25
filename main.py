@@ -1,3 +1,4 @@
+import asyncio
 import time
 import traceback
 from colorama import Fore
@@ -25,7 +26,10 @@ moderator_access = {
 }
 
 moderator_api = None
-last_message = ""
+last_message = {
+    "text": ""
+}
+
 moderator_id = 0
 all_messages_base = {
     0: types.Message
@@ -34,7 +38,10 @@ all_messages_base = {
 
 @dp.message_handler(commands=['start'])
 async def reg(message: types.Message):
-    message_for_reg = "Пройдите регистрацию по ссылке: \nhttps://my.telegram.org\n" \
+    print(message)
+    message_for_reg = "Привет!\n" \
+                      "Разработчики проекта: @Mikhai_Maclay и @crazysadboi\n" \
+                      "Пройдите регистрацию по ссылке: \nhttps://my.telegram.org\n" \
                       "Вот гайд, если не разберетесь: \n" \
                       "https://tlgrm.ru/docs/api/obtaining_api_id\n\n" \
                       "Если прошли регистрацию, нажмите кнопку  ⬇  "
@@ -45,6 +52,7 @@ async def reg(message: types.Message):
 async def receive_message(message: types.Message):
     global last_message
     last_message = message
+    print(last_message)
 
 
 @dp.callback_query_handler(text="continue")
@@ -94,10 +102,13 @@ async def login(query: CallbackQuery):
         moderator_api = API(moderator_access["api_id"], moderator_access["api_hash"], moderator_access["phone_number"])
         start_res = await moderator_api.start()
         if start_res:
-            await bot.send_message(query.from_user.id, "Номер телефона принят. Введите полученный код",
+            await bot.send_message(query.from_user.id, "Номер телефона принят. Введите полученный "
+                                                       "код в формате code_xxxxx",
                                    reply_markup=markup_receive_code)
         else:
-            await bot.send_message(query.from_user.id, "Номер телефона принят. Вы уже авторизованы по коду")
+            await bot.send_message(query.from_user.id, "Номер телефона принят. Вы уже авторизованы по коду\n"
+                                                       "Введите ссылку на группу",
+                                   reply_markup=markup_continue_after_group)
         time.sleep(0.5)
     else:
         await bot.send_message(query.from_user.id, "Формат введеных данных не верен\nВведите номер телефона повторно",
@@ -109,8 +120,10 @@ async def login(query: CallbackQuery):
 @dp.callback_query_handler(text="receive_code")
 async def login(query: CallbackQuery):
     global last_message, moderator_api, moderator_id
-    if last_message["text"].isdigit() and len(last_message["text"]) == 5:
-        moderator_access["code"] = last_message["text"]
+    check_msg = last_message["text"].split("_")[-1]
+    if check_msg.isdigit() and len(check_msg) == 5:
+        moderator_access["code"] = check_msg
+        print(moderator_access["code"])
         await bot.send_message(query.from_user.id, "Код подтверждения принят!")
         login_res = await moderator_api.login(moderator_access["code"])
         if login_res:
@@ -139,7 +152,7 @@ async def login(query: CallbackQuery):
         await bot.send_message(query.from_user.id, "Ссылка принята!")
         if get_chat_res:
             await bot.send_message(query.from_user.id, "Бот начал работу!")
-            await moderator_api.parse(limit=20)
+            await main_sender(query.from_user.id)
         else:
             await bot.send_message(query.from_user.id, "Чат не найден. Проверьте, что вы находитесь в этой группе!\n"
                                                        "И что группа существует!",
@@ -155,10 +168,19 @@ async def login(query: CallbackQuery):
 @dp.callback_query_handler(text="accept_message")
 async def accept(query: CallbackQuery):
     global moderator_api
-    # Жесть, я решение забыл. Я сидел уже придумал и просто забыл. Завтра вспомню наверное
+    msg = all_messages_base[query.message.message_id]
+    username = await moderator_api.client.get_entity(msg.from_id)
     await bot.edit_message_reply_markup(chat_id=query.from_user.id,
                                         message_id=query.message.message_id,
                                         reply_markup=None)
+    if username.username is not None:
+        await bot.edit_message_text(f"@{username.username}\n"
+                                    f"Сообщение:\n"
+                                    f"{msg.message}", message_id=query.message.message_id, chat_id=query.from_user.id)
+    else:
+        await bot.edit_message_text(f"Пользователь пользуется закрытым аккаунтом\n"
+                                    f"Сообщение:\n"
+                                    f"{msg.message}", message_id=query.message.message_id, chat_id=query.from_user.id)
 
 
 @dp.callback_query_handler(text="decline_message")
@@ -168,24 +190,25 @@ async def decline(query: CallbackQuery):
                              message_id=query.message.message_id)
 
 
-async def main_sender(moder_id, timer=120):
+async def main_sender(moder_id, timer=60):
     global moderator_api
     while True:
         try:
-            result = await moderator_api.parse()
-            time.sleep(10)
+            result = await moderator_api.parse(limit=10)
+            time.sleep(5)
             for msg in result:
-                all_messages_base[msg.from_id.user_id] = msg
                 res_msg = f"Сообщение:\n" \
                           f"{msg.message}"
                 # Берем id этого сообщения и засовываем как ключ в all_msgs_base или user_id, мозг не работает уже
-                await bot.send_message(moder_id, res_msg, reply_markup=markup_accept_message)
-                time.sleep(10)
+                my_message = await bot.send_message(moder_id, res_msg, reply_markup=markup_accept_message)
+                all_messages_base[my_message.message_id] = msg
+                await asyncio.sleep(1)
+            await asyncio.sleep(timer)
 
-            time.sleep(timer + 60)
         except:
-            traceback.format_exc()
+            print(traceback.format_exc())
             print(Fore.RED + f'API модера {moder_id}. Бот упал во время работы')
+
 
 if __name__ == "__main__":
     executor.start_polling(dp)
