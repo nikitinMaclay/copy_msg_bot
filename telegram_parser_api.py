@@ -124,32 +124,40 @@ class API:
             iter_user_id = []
             with open('user_ids.txt', mode='r') as f:
                 data = f.readlines()
-            if data:
-                for k in range(len(data)):
-                    data[k] = int(data[k].replace('\n', ''))
-            history = await self.client(GetHistoryRequest(
-                peer=chat,
-                offset_id=0,
-                offset_date=None, add_offset=0,
-                limit=limit, max_id=0, min_id=0,
-                hash=0))
-            messages = history.messages
-            print(messages)
-            for message in messages:
-                message.to_dict()
-                if message.message is not None:
-                    if message.reply_to is None:
-                        if '?' in message.message:
-                            if message.sender_id not in data and (str(message.sender_id) + "\n") not in iter_user_id:
-                                iter_user_id.append(str(message.sender_id) + "\n")
-                                res.append(message)
-                                # этот принт сообщения можешь убрать, если
-                                print(message)
-            if iter_user_id:
-                with open('user_ids.txt', mode='a') as f:
-                    f.writelines(iter_user_id)
-            res.reverse()
-            return res
+            try:
+                if data:
+                    for k in range(len(data)):
+                        try:
+                            data[k] = int(data[k].replace('\n', ''))
+                        except ValueError:
+                            continue
+                history = await self.client(GetHistoryRequest(
+                    peer=chat,
+                    offset_id=0,
+                    offset_date=None, add_offset=0,
+                    limit=limit, max_id=0, min_id=0,
+                    hash=0))
+                messages = history.messages
+                print(messages)
+                for message in messages:
+                    message.to_dict()
+                    if message.message is not None:
+                        if message.reply_to is None:
+                            if '?' in message.message:
+                                if message.sender_id not in data and (str(message.sender_id) + "\n") not in iter_user_id:
+                                    iter_user_id.append(str(message.sender_id) + "\n")
+                                    res.append(message)
+                                    # этот принт сообщения можешь убрать, если
+                                    print(message)
+                if iter_user_id:
+                    with open('user_ids.txt', mode='a') as f:
+                        f.writelines(iter_user_id)
+                res.reverse()
+                return res
+            except:
+                print('Ошибка парса')
+                print(traceback.format_exc())
+                return []
         else:
             print(Fore.RED + f'API по номеру {self.phone}. Логин не пройден. Невозможно запустить парсинг')
             return None

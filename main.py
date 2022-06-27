@@ -220,15 +220,20 @@ async def login(query: CallbackQuery):
 @dp.callback_query_handler(text="accept_message")
 async def accept(query: CallbackQuery):
     msg = moders[query.from_user.id].all_messages_base[query.message.message_id]
-    username = await moders[query.from_user.id].api.client.get_entity(msg.from_id)
-    await bot.edit_message_reply_markup(chat_id=query.from_user.id,
-                                        message_id=query.message.message_id,
-                                        reply_markup=None)
-    if username.username is not None:
-        await bot.edit_message_text(f"@{username.username}\n"
-                                    f"Сообщение:\n"
-                                    f"{msg.message}", message_id=query.message.message_id, chat_id=query.from_user.id)
-    else:
+    try:
+        username = await moders[query.from_user.id].api.client.get_entity(msg.from_id)
+        await bot.edit_message_reply_markup(chat_id=query.from_user.id,
+                                            message_id=query.message.message_id,
+                                            reply_markup=None)
+        if username.username is not None:
+            await bot.edit_message_text(f"@{username.username}\n"
+                                        f"Сообщение:\n"
+                                        f"{msg.message}", message_id=query.message.message_id, chat_id=query.from_user.id)
+        else:
+            await bot.edit_message_text(f"Пользователь пользуется закрытым аккаунтом\n"
+                                        f"Сообщение:\n"
+                                        f"{msg.message}", message_id=query.message.message_id, chat_id=query.from_user.id)
+    except:
         await bot.edit_message_text(f"Пользователь пользуется закрытым аккаунтом\n"
                                     f"Сообщение:\n"
                                     f"{msg.message}", message_id=query.message.message_id, chat_id=query.from_user.id)
