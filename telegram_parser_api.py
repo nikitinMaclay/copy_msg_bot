@@ -43,7 +43,7 @@ proxy_base = ['45.133.34.19:8000:GcDvZG:vkgyMg']
 def timeout(mn: int, mx: int):
     t = random.randrange(mn, mx)
     print(Fore.BLUE + f'Времени для продолжения работы {t}')
-    time.sleep(t)
+    return t
 
 
 # При подключении:
@@ -57,7 +57,7 @@ class API:
         self.api_id = api_id
         self.api_hash = api_hash
         self.logged = False
-        self.target_group = None
+        self.target_group = []
         self.client = None
         self.proxy = (socks.SOCKS5, *random.choice(proxy_base).split(':'))
 
@@ -78,6 +78,8 @@ class API:
 
     # Повторная отправка кода, в случае ошибки. Лучше вызывай по колбэку
     async def code_again(self):
+        await self.client.disconnect()
+        await self.client.connect()
         await self.client.send_code_request(self.phone)
 
     # После создания класса, в телегу на номер придут код, его передавай в переменную code
@@ -99,9 +101,12 @@ class API:
     # Попроси имя чата, и передай его в group_name, вызови после успешного логина
     async def get_chat(self, url: str):
         try:
-            self.target_group = await self.client.get_entity(url)
-            print(Fore.GREEN + f'API по номеру {self.phone}. Чат найден, API готов к работе')
-            return 1
+            tg = await self.client.get_entity(url)
+            if tg not in self.target_group:
+                self.target_group.append(tg)
+                print(Fore.GREEN + f'API по номеру {self.phone}. Чат найден, API готов к работе')
+                return 1
+            # return None => не добавилась тк уже есть
         except:
             print(Fore.RED + f'API по номеру {self.phone}. Чат не найден.')
             return 0
@@ -113,32 +118,36 @@ class API:
     # sec_min/sec_max - время ожидания между чтением сообщения (минимальное и максимальное значение в секундах)
     # .........................................................................................................
     # Возвращает тебе список сообщений type.Message, уже фильтрованных, тебе их нужно отправлять модеру
-    async def parse(self, limit=5, sec_min=10, sec_max=20):
+    async def parse(self, chat, limit=5):
         if self.logged:
             res = []
             iter_user_id = []
             with open('user_ids.txt', mode='r') as f:
                 data = f.readlines()
-            for k in range(len(data)):
-                data[k] = int(data[k].replace('\n', ''))
+            if data:
+                for k in range(len(data)):
+                    data[k] = int(data[k].replace('\n', ''))
             history = await self.client(GetHistoryRequest(
-                peer=self.target_group,
+                peer=chat,
                 offset_id=0,
                 offset_date=None, add_offset=0,
                 limit=limit, max_id=0, min_id=0,
                 hash=0))
             messages = history.messages
+            print(messages)
             for message in messages:
                 message.to_dict()
-                if message.reply_to is None:
-                    if '?' in message.message:
-                        if message.sender_id not in data and str(message.sender_id) not in iter_user_id:
-                            iter_user_id.append(str(message.sender_id) + "\n")
-                            res.append(message)
-                            # этот принт сообщения можешь убрать, если
-                            print(message)
-            with open('user_ids.txt', mode='a') as f:
-                f.writelines(iter_user_id)
+                if message.message is not None:
+                    if message.reply_to is None:
+                        if '?' in message.message:
+                            if message.sender_id not in data and (str(message.sender_id) + "\n") not in iter_user_id:
+                                iter_user_id.append(str(message.sender_id) + "\n")
+                                res.append(message)
+                                # этот принт сообщения можешь убрать, если
+                                print(message)
+            if iter_user_id:
+                with open('user_ids.txt', mode='a') as f:
+                    f.writelines(iter_user_id)
             res.reverse()
             return res
         else:
