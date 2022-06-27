@@ -35,6 +35,12 @@ class Moder:
                 try:
                     for chat in self.api.target_group:
                         result = await self.api.parse(chat, limit=15)
+                        if result == 0:
+                            res_msg = f'Чат {chat.title} недоступен. Он удален из очереди.\n\n' \
+                                      f'Попробуйте добавить его еще раз'
+                            my_message = await bot.send_message(self.moder_id, res_msg)
+                            self.api.target_group.remove(chat)
+                            print(self.moder_id, my_message.text)
                         await asyncio.sleep(5)
                         for msg in result:
                             res_msg = f"Сообщение:\n" \

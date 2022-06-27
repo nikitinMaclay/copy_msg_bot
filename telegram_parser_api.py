@@ -6,6 +6,7 @@ import socks
 import time
 import random
 import asyncio
+import sqlite3
 from telethon.tl.types import Message, PeerUser
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetHistoryRequest
@@ -137,7 +138,10 @@ class API:
                     offset_date=None, add_offset=0,
                     limit=limit, max_id=0, min_id=0,
                     hash=0))
-                messages = history.messages
+                try:
+                    messages = history.messages
+                except sqlite3.OperationalError:
+                    return 0
                 print(messages)
                 for message in messages:
                     message.to_dict()
