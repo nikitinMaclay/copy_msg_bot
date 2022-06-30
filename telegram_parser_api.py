@@ -3,13 +3,12 @@ import traceback
 from colorama import Fore
 # pip install PySocks, чтобы скачать socks
 import socks
-import time
 import random
-import asyncio
 import sqlite3
-from telethon.tl.types import Message, PeerUser
+from sql_commands import add_group_to_base
 from telethon.sync import TelegramClient
 from telethon.tl.functions.messages import GetHistoryRequest
+from telethon.tl.types import ChannelParticipantsAdmins
 
 
 # Создай глобальную переменную
@@ -65,6 +64,7 @@ class API:
     async def start(self):
         self.client = TelegramClient(self.phone, self.api_id, self.api_hash, proxy=self.proxy)
         await self.client.connect()
+        await self.client.disconnect()
         print(Fore.WHITE + f'API по номеру {self.phone}. Подключен')
         self.logged = await self.client.is_user_authorized()
         if not self.logged:
@@ -94,7 +94,8 @@ class API:
                 return 1
             except:
                 traceback.format_exc()
-                print(Fore.RED + f'API по номеру {self.phone}. Подключение не удалось, нужен повторный запрос')
+                print(Fore.RED + f'API по номеру {self.phone}. Подключение не удалось, нужен повторный запрос',
+                      Fore.WHITE + ' ')
                 return 0
         else:
             print(Fore.WHITE + f'API по номеру {self.phone}. Логин уже пройден, код не нужен')
@@ -105,16 +106,25 @@ class API:
             tg = await self.client.get_entity(url)
             if tg not in self.target_group:
                 self.target_group.append(tg)
-                print(Fore.GREEN + f'API по номеру {self.phone}. Чат найден, API готов к работе')
+                admins = []
+                async for user in self.client.iter_participants(tg, filter=ChannelParticipantsAdmins):
+                    admins.append(str(user.id) + '\n')
+                print('admins', url)
+                print(admins)
+                with open('user_ids.txt', mode='a') as f:
+                    f.writelines(admins)
+                print(Fore.GREEN + f'API по номеру {self.phone}. Чат найден, API готов к работе',
+                      Fore.WHITE + ' ')
                 return 1
-            # return None => не добавилась тк уже есть
         except:
-            print(Fore.RED + f'API по номеру {self.phone}. Чат не найден.')
+            print(traceback.format_exc())
+            print(Fore.RED + f'API по номеру {self.phone}. Чат не найден.',
+                  Fore.WHITE + ' ')
             return 0
 
     # Это уже сам парсинг группы:
     # limit - количество последних сообщений, которые читаются
-    # в них входят и не подходящие сообщения, поэтому пустой результат это не всегда плохо
+    # в них входят и не подходящие сокобщения, поэтому пустой результат это не всегда плохо
     # .........................................................................................................
     # sec_min/sec_max - время ожидания между чтением сообщения (минимальное и максимальное значение в секундах)
     # .........................................................................................................
@@ -142,7 +152,6 @@ class API:
                     messages = history.messages
                 except sqlite3.OperationalError:
                     return 0
-                print(messages)
                 for message in messages:
                     message.to_dict()
                     if message.message is not None:
@@ -151,7 +160,6 @@ class API:
                                 if message.sender_id not in data and (str(message.sender_id) + "\n") not in iter_user_id:
                                     iter_user_id.append(str(message.sender_id) + "\n")
                                     res.append(message)
-                                    # этот принт сообщения можешь убрать, если
                                     print(message)
                 if iter_user_id:
                     with open('user_ids.txt', mode='a') as f:

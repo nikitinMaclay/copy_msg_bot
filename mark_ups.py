@@ -1,5 +1,5 @@
 from aiogram.types.inline_keyboard import InlineKeyboardMarkup, InlineKeyboardButton
-
+from aiogram.types.reply_keyboard import ReplyKeyboardMarkup, KeyboardButton
 menu_markup_for_reg = InlineKeyboardMarkup(row_width=1, one_time_keyboard=True)
 buttons_for_reg = [InlineKeyboardButton(text="Продолжить", callback_data='continue')]
 
@@ -69,5 +69,14 @@ buttons_accept_message = [
     InlineKeyboardButton(text="Принять", callback_data='accept_message'),
     InlineKeyboardButton(text="Отклонить", callback_data='decline_message')
 ]
+
+markup_menu = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, one_time_keyboard=True)
+markup_menu.row(*[
+    KeyboardButton(text='Добавить группу'),
+    KeyboardButton(text='Удалить группу')
+                  ]).row(*[KeyboardButton(text='Список групп'),
+                           KeyboardButton(text='Отчет')]).add(KeyboardButton(text='Включить/Выключить бота'))
+markup_menu.add(KeyboardButton(text='Скрыть меню'))
+
 
 markup_accept_message.add(*buttons_accept_message)
