@@ -65,7 +65,6 @@ class API:
         # self.client = TelegramClient(self.phone, self.api_id, self.api_hash, proxy=self.proxy)
         self.client = TelegramClient(self.phone, self.api_id, self.api_hash)
         await self.client.connect()
-        await self.client.disconnect()
         print(Fore.WHITE + f'API по номеру {self.phone}. Подключен')
         self.logged = await self.client.is_user_authorized()
         if not self.logged:
