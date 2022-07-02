@@ -59,10 +59,11 @@ class API:
         self.logged = False
         self.target_group = []
         self.client = None
-        self.proxy = (socks.SOCKS5, *random.choice(proxy_base).split(':'))
+        # self.proxy = (socks.SOCKS5, *random.choice(proxy_base).split(':'))
 
     async def start(self):
-        self.client = TelegramClient(self.phone, self.api_id, self.api_hash, proxy=self.proxy)
+        # self.client = TelegramClient(self.phone, self.api_id, self.api_hash, proxy=self.proxy)
+        self.client = TelegramClient(self.phone, self.api_id, self.api_hash)
         await self.client.connect()
         await self.client.disconnect()
         print(Fore.WHITE + f'API по номеру {self.phone}. Подключен')
