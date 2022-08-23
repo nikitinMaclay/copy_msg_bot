@@ -24,6 +24,12 @@ ADMIN = 508537898
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
+spam_text = [
+    "Добрый день. Увидел в чате ваше сообщение. "
+    "У нас есть визовый чат. Там на вопросы отвечают админы и участники. Просто скопируйте свой вопрос туда ☝",
+    "ссылку на чат разместил в описании профиля. Надеюсь ваш вопрос решится 🙏",
+]
+
 
 class Moder:
     def __init__(self, api: API = API(), user_id: int = random.randrange(-123123, 0), active=False):
@@ -421,6 +427,9 @@ async def accept(query: CallbackQuery):
         if username.username is not None:
             moders[query.from_user.id].users.append(username.username)
             moders[query.from_user.id].counter += 1
+            await moders[query.from_user.id].api.client.send_message(username.username, msg["message"])
+            await moders[query.from_user.id].api.client.send_message(username.username, spam_text[0])
+            await moders[query.from_user.id].api.client.send_message(username.username, spam_text[1])
             if chat:
                 res_msg = f'@{username.username}\n'\
                           f'Чат: <a href="https://t.me/{chat.username}">{chat.title}</a>\n' \
